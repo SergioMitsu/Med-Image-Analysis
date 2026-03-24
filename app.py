@@ -11,19 +11,15 @@ from flask_login import UserMixin
 import numpy as np
 from PIL import Image
 import io
-from scipy import ndimage, stats
 
 # ============================================
-# CONFIGURAÇÃO DO APP
+# CONFIGURAÇÃO
 # ============================================
-
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'chave-secreta-padrao-mude')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'chave-secreta-padrao')
 
-# Banco de dados SQLite com persistência no Render
-data_dir = os.environ.get('DATA_DIR', '/var/data')
-if not os.path.exists(data_dir):
-    data_dir = '.'  # Fallback para local
+# Banco de dados SQLite
+data_dir = os.environ.get('DATA_DIR', '.')
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{data_dir}/database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -31,13 +27,11 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join(data_dir, 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
-# Cria pastas necessárias
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # ============================================
 # BANCO DE DADOS
 # ============================================
-
 db = SQLAlchemy(app)
 
 class User(UserMixin, db.Model):
@@ -58,13 +52,11 @@ class Analise(db.Model):
     filepath = db.Column(db.String(500), nullable=False)
     resultado = db.Column(db.String(20), nullable=False)
     probabilidade = db.Column(db.Float, nullable=False)
-    features = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # ============================================
-# ANALISADOR DE IMAGENS
+# ANALISADOR SIMPLES (para teste)
 # ============================================
-
 class ImageAnalyzer:
     def analisar(self, imagem_bytes):
         try:
@@ -85,21 +77,15 @@ class ImageAnalyzer:
                 resultado = 'NORMAL'
                 probabilidade = 1 - score
             
-            return {
-                'sucesso': True,
-                'resultado': resultado,
-                'probabilidade': probabilidade,
-                'features': {'media': media, 'desvio': desvio}
-            }
+            return {'sucesso': True, 'resultado': resultado, 'probabilidade': probabilidade}
         except Exception as e:
             return {'sucesso': False, 'mensagem': str(e)}
 
 analyzer = ImageAnalyzer()
 
 # ============================================
-# LOGIN
+# AUTENTICAÇÃO
 # ============================================
-
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -116,7 +102,6 @@ def allowed_file(filename):
 # ============================================
 # ROTAS
 # ============================================
-
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -156,7 +141,6 @@ def register():
         db.session.commit()
         flash('Cadastro realizado! Faça login.', 'success')
         return redirect(url_for('login'))
-    
     return render_template('register.html')
 
 @app.route('/logout')
@@ -188,7 +172,7 @@ def upload():
             return redirect(request.url)
         
         if not allowed_file(file.filename):
-            flash('Formato não permitido! Use PNG, JPG, JPEG, BMP', 'danger')
+            flash('Formato não permitido!', 'danger')
             return redirect(request.url)
         
         try:
@@ -205,16 +189,14 @@ def upload():
                     filename=filename,
                     filepath=filepath,
                     resultado=resultado['resultado'],
-                    probabilidade=resultado['probabilidade'],
-                    features=json.dumps(resultado['features'])
+                    probabilidade=resultado['probabilidade']
                 )
                 db.session.add(analise)
                 db.session.commit()
                 
                 session['ultimo_resultado'] = {
                     'resultado': resultado['resultado'],
-                    'probabilidade': resultado['probabilidade'],
-                    'features': resultado['features']
+                    'probabilidade': resultado['probabilidade']
                 }
                 
                 flash(f'Resultado: {resultado["resultado"]}', 'success')
@@ -244,14 +226,9 @@ def admin_dashboard():
     if current_user.role != 'admin':
         flash('Acesso negado!', 'danger')
         return redirect(url_for('dashboard'))
-    
     return render_template('admin_dashboard.html',
                          total_usuarios=User.query.count(),
-                         total_analises=Analise.query.count(),
-                         admins=User.query.filter_by(role='admin').count(),
-                         medicos=User.query.filter_by(role='medico').count(),
-                         pacientes=User.query.filter_by(role='paciente').count(),
-                         ultimas_analises=Analise.query.order_by(Analise.created_at.desc()).limit(10).all())
+                         total_analises=Analise.query.count())
 
 @app.route('/admin/users')
 @login_required
@@ -267,7 +244,6 @@ def delete_user(user_id):
     if current_user.role != 'admin':
         flash('Acesso negado!', 'danger')
         return redirect(url_for('dashboard'))
-    
     user = User.query.get_or_404(user_id)
     if user.id != current_user.id:
         db.session.delete(user)
@@ -278,10 +254,8 @@ def delete_user(user_id):
 # ============================================
 # INICIALIZAÇÃO
 # ============================================
-
 with app.app_context():
     db.create_all()
-    # Cria admin padrão se não existir
     if not User.query.filter_by(username='admin').first():
         admin = User(
             username='admin',
@@ -291,7 +265,6 @@ with app.app_context():
         )
         db.session.add(admin)
         db.session.commit()
-        print("✅ Admin criado!")
 
 if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
