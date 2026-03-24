@@ -1,4 +1,120 @@
 {% extends "base.html" %}
+
+{% block title %}Dashboard - MedAnalyzer{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="text-white mb-4">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+            <small class="text-white-50 d-block d-sm-inline-block">
+                Bem-vindo, {{ current_user.username }}!
+            </small>
+        </h2>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-4">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="fas fa-chart-line fa-2x fa-3x text-primary"></i>
+                <h2 class="mt-2 mb-0">{{ total_analises }}</h2>
+                <p class="text-muted small">Total de Análises</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+                <h2 class="mt-2 mb-0">{{ analises_anomalia }}</h2>
+                <p class="text-muted small">Anomalias Detectadas</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <i class="fas fa-percent fa-2x text-info"></i>
+                <h2 class="mt-2 mb-0">
+                    {% if total_analises > 0 %}
+                        {{ (analises_anomalia / total_analises * 100)|round(1) }}%
+                    {% else %}
+                        0%
+                    {% endif %}
+                </h2>
+                <p class="text-muted small">Taxa de Detecção</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history"></i> Últimas Análises</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if ultimas_analises %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Arquivo</th>
+                                    <th>Resultado</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for analise in ultimas_analises %}
+                                <tr>
+                                    <td class="small">{{ analise.created_at.strftime('%d/%m/%y %H:%M') }}</td>
+                                    <td class="small text-truncate" style="max-width: 150px;">{{ analise.filename[:20] }}</td>
+                                    <td>
+                                        <span class="badge {% if analise.resultado == 'ANOMALIA' %}bg-danger{% else %}bg-success{% endif %}">
+                                            {{ analise.resultado }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('view_analise', analise_id=analise.id) }}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-folder-open fa-3x text-muted mb-2"></i>
+                        <p class="text-muted">Nenhuma análise realizada ainda.</p>
+                        <a href="{{ url_for('upload') }}" class="btn btn-primary">
+                            <i class="fas fa-upload"></i> Realizar Primeira Análise
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="d-grid gap-2 d-md-flex">
+            <a href="{{ url_for('upload') }}" class="btn btn-primary">
+                <i class="fas fa-upload"></i> Nova Análise
+            </a>
+            <a href="{{ url_for('history') }}" class="btn btn-outline-primary">
+                <i class="fas fa-history"></i> Ver Histórico Completo
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}{% extends "base.html" %}
 {% block content %}
 <h2>Dashboard</h2>
 <div class="row">
