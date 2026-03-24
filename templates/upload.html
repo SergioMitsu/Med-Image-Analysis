@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">Enviar Imagem para Análise</div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <input type="file" name="file" class="form-control mb-3" accept="image/*" required>
+                    <button class="btn btn-primary w-100">Analisar</button>
+                </form>
+                <small class="text-muted">Formatos: PNG, JPG, JPEG, BMP</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

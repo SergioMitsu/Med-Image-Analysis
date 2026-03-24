@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Gerenciar Usuários</h2>
+<table class="table">
+    <tr><th>ID</th><th>Usuário</th><th>Email</th><th>Papel</th><th>Ações</th></tr>
+    {% for u in usuarios %}
+    <tr>
+        <td>{{ u.id }}</td>
+        <td>{{ u.username }}</td>
+        <td>{{ u.email }}</td>
+        <td>{{ u.role }}</td>
+        <td>
+            {% if u.username != 'admin' %}
+            <form method="POST" action="/admin/user/{{ u.id }}/delete" style="display:inline">
+                <button class="btn btn-danger btn-sm" onclick="return confirm('Deletar?')">Deletar</button>
+            </form>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card text-center">
+    <div class="card-header bg-{{ 'danger' if resultado.resultado == 'ANOMALIA' else 'success' }} text-white">
+        <h3>Resultado: {{ resultado.resultado }}</h3>
+    </div>
+    <div class="card-body">
+        <h4>Probabilidade: {{ "%.1f"|format(resultado.probabilidade * 100) }}%</h4>
+        <a href="/upload" class="btn btn-primary">Nova Análise</a>
+        <a href="/history" class="btn btn-secondary">Ver Histórico</a>
+    </div>
+</div>
+{% endblock %}

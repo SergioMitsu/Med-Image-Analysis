@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Dashboard</h2>
+<div class="row">
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3>{{ total_analises }}</h3>
+                <p>Total de Análises</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3>{{ analises_anomalia }}</h3>
+                <p>Anomalias Detectadas</p>
+            </div>
+        </div>
+    </div>
+</div>
+<h3 class="mt-4">Últimas Análises</h3>
+<table class="table">
+    <tr><th>Data</th><th>Resultado</th></tr>
+    {% for a in ultimas_analises %}
+    <tr>
+        <td>{{ a.created_at.strftime('%d/%m/%Y') }}</td>
+        <td><span class="badge bg-{{ 'danger' if a.resultado == 'ANOMALIA' else 'success' }}">{{ a.resultado }}</span></td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

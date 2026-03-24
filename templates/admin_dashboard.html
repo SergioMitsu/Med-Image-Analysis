@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Painel Admin</h2>
+<div class="row">
+    <div class="col-md-3"><div class="card"><div class="card-body"><h3>{{ total_usuarios }}</h3><p>Usuários</p></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body"><h3>{{ total_analises }}</h3><p>Análises</p></div></div></div>
+</div>
+<a href="/admin/users" class="btn btn-primary">Gerenciar Usuários</a>
+{% endblock %}

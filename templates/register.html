@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">Cadastro</div>
+            <div class="card-body">
+                <form method="POST">
+                    <input type="text" name="username" class="form-control mb-2" placeholder="Usuário" required>
+                    <input type="email" name="email" class="form-control mb-2" placeholder="Email" required>
+                    <input type="password" name="password" class="form-control mb-2" placeholder="Senha" required>
+                    <select name="role" class="form-control mb-2">
+                        <option value="paciente">Paciente</option>
+                        <option value="medico">Médico</option>
+                    </select>
+                    <button class="btn btn-primary w-100">Cadastrar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

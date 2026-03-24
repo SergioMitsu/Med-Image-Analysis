@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Histórico de Análises</h2>
+<table class="table">
+    <thead>
+        <tr><th>Data</th><th>Arquivo</th><th>Resultado</th><th>Probabilidade</th></tr>
+    </thead>
+    <tbody>
+        {% for a in analises %}
+        <tr>
+            <td>{{ a.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+            <td>{{ a.filename[:30] }}</td>
+            <td><span class="badge bg-{{ 'danger' if a.resultado == 'ANOMALIA' else 'success' }}">{{ a.resultado }}</span></td>
+            <td>{{ "%.1f"|format(a.probabilidade * 100) }}%</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
