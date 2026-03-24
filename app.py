@@ -70,7 +70,7 @@ class ImageAnalyzer:
             desvio = np.std(img_array)
             score = (media / 255) * 0.5 + (desvio / 128) * 0.5
             
-            if score > 0.45:
+            if score < 0.45:
                 resultado = 'ANOMALIA'
                 probabilidade = score
             else:
