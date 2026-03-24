@@ -102,6 +102,12 @@ def allowed_file(filename):
 # ============================================
 # ROTAS
 # ============================================
+@app.route('/profile')
+@login_required
+def profile():
+    """Página de perfil do usuário"""
+    return render_template('profile.html', user=current_user)
+    
 @app.route('/')
 def index():
     return render_template('index.html')
