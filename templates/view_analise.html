@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Detalhes da Análise{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4>Detalhes da Análise</h4>
+            </div>
+            <div class="card-body">
+                <p><strong>Data:</strong> {{ analise.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
+                <p><strong>Resultado:</strong> 
+                    <span class="badge bg-{{ 'danger' if analise.resultado == 'ANOMALIA' else 'success' }}">
+                        {{ analise.resultado }}
+                    </span>
+                </p>
+                <p><strong>Probabilidade:</strong> {{ "%.1f"|format(analise.probabilidade * 100) }}%</p>
+                <a href="{{ url_for('history') }}" class="btn btn-secondary">Voltar</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
