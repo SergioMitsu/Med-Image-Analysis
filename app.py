@@ -7,6 +7,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
+from flask import send_file
 import numpy as np
 from PIL import Image
 import io
