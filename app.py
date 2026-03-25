@@ -98,6 +98,128 @@ def allowed_file(filename):
 # ============================================
 # ROTAS
 # ============================================
+@app.route('/admin/relatorio-pdf')
+@login_required
+def gerar_relatorio_pdf():
+    """Gera relatório PDF com estatísticas do sistema (apenas admin)"""
+    if current_user.role != 'admin':
+        flash('Acesso negado!', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as ReportImage
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.lib.enums import TA_CENTER
+    import io
+    from datetime import datetime
+    import matplotlib.pyplot as plt
+    
+    # Criar buffer para o PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=2*cm, bottomMargin=2*cm)
+    styles = getSampleStyleSheet()
+    story = []
+    
+    # Título
+    titulo_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=24,
+        textColor=colors.HexColor('#667eea'),
+        alignment=TA_CENTER,
+        spaceAfter=30
+    )
+    story.append(Paragraph("MedAnalyzer - Relatório do Sistema", titulo_style))
+    story.append(Spacer(1, 20))
+    
+    # Data do relatório
+    data_atual = datetime.now().strftime('%d/%m/%Y %H:%M')
+    story.append(Paragraph(f"Gerado em: {data_atual}", styles['Normal']))
+    story.append(Spacer(1, 20))
+    
+    # Estatísticas gerais
+    total_usuarios = User.query.count()
+    total_analises = Analise.query.count()
+    normais = Analise.query.filter_by(resultado='NORMAL').count()
+    anomalias = Analise.query.filter_by(resultado='ANOMALIA').count()
+    taxa_anomalias = (anomalias / total_analises * 100) if total_analises > 0 else 0
+    
+    stats_data = [
+        ['Métrica', 'Valor'],
+        ['Total de Usuários', str(total_usuarios)],
+        ['Total de Análises', str(total_analises)],
+        ['Análises Normais', str(normais)],
+        ['Análises com Anomalia', str(anomalias)],
+        ['Taxa de Anomalias', f'{taxa_anomalias:.1f}%']
+    ]
+    
+    tabela_stats = Table(stats_data, colWidths=[8*cm, 6*cm])
+    tabela_stats.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    story.append(tabela_stats)
+    story.append(Spacer(1, 30))
+    
+    # Gráfico de pizza (proporção)
+    fig, ax = plt.subplots(figsize=(6, 4))
+    labels = ['NORMAL', 'ANOMALIA']
+    sizes = [normais, anomalias]
+    colors_list = ['#28a745', '#dc3545']
+    ax.pie(sizes, labels=labels, colors=colors_list, autopct='%1.1f%%', startangle=90)
+    ax.set_title('Proporção de Resultados')
+    
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', bbox_inches='tight')
+    buf.seek(0)
+    plt.close()
+    
+    img = ReportImage(buf, width=10*cm, height=8*cm)
+    story.append(img)
+    story.append(Spacer(1, 20))
+    
+    # Lista de usuários
+    story.append(Paragraph("Usuários Cadastrados", styles['Heading2']))
+    story.append(Spacer(1, 10))
+    
+    usuarios = User.query.all()
+    usuarios_data = [['ID', 'Usuário', 'Email', 'Papel', 'Análises']]
+    for u in usuarios:
+        num_analises = Analise.query.filter_by(user_id=u.id).count()
+        usuarios_data.append([str(u.id), u.username, u.email, u.role, str(num_analises)])
+    
+    tabela_usuarios = Table(usuarios_data, colWidths=[2*cm, 4*cm, 6*cm, 3*cm, 2*cm])
+    tabela_usuarios.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER')
+    ]))
+    story.append(tabela_usuarios)
+    
+    # Construir PDF
+    doc.build(story)
+    buffer.seek(0)
+    
+    # Enviar PDF para download
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=f'relatorio_medanalyzer_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf',
+        mimetype='application/pdf'
+    )
+
 @app.route('/')
 def index():
     return render_template('index.html')
