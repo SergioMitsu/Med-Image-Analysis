@@ -1,47 +1,18 @@
 {% extends "base.html" %}
-
-{% block title %}Meu Perfil - MedAnalyzer{% endblock %}
-
+{% block title %}Meu Perfil{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-6">
         <div class="card">
             <div class="card-header bg-primary text-white">
-                <h4><i class="fas fa-user-circle"></i> Meu Perfil</h4>
+                <h4>Meu Perfil</h4>
             </div>
             <div class="card-body">
-                <div class="text-center mb-4">
-                    <i class="fas fa-user-circle fa-5x text-primary"></i>
-                </div>
-                
-                <table class="table">
-                    <tr>
-                        <th><i class="fas fa-user"></i> Usuário:</th>
-                        <td>{{ user.username }}</td>
-                    </tr>
-                    <tr>
-                        <th><i class="fas fa-envelope"></i> Email:</th>
-                        <td>{{ user.email }}</td>
-                    </tr>
-                    <tr>
-                        <th><i class="fas fa-tag"></i> Papel:</th>
-                        <td>
-                            <span class="badge {% if user.role == 'admin' %}bg-danger{% elif user.role == 'medico' %}bg-info{% else %}bg-success{% endif %}">
-                                {{ user.role }}
-                            </span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th><i class="fas fa-calendar"></i> Cadastro:</th>
-                        <td>{{ user.created_at.strftime('%d/%m/%Y %H:%M') if user.created_at else 'N/A' }}</td>
-                    </tr>
-                </table>
-                
-                <div class="text-center mt-3">
-                    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Voltar
-                    </a>
-                </div>
+                <p><strong>Usuário:</strong> {{ user.username }}</p>
+                <p><strong>Email:</strong> {{ user.email }}</p>
+                <p><strong>Tipo:</strong> {{ user.role }}</p>
+                <p><strong>Cadastro:</strong> {{ user.created_at.strftime('%d/%m/%Y') if user.created_at else 'N/A' }}</p>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Voltar</a>
             </div>
         </div>
     </div>
