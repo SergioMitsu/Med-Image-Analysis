@@ -1,6 +1,5 @@
 import os
 import uuid
-import json
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -18,12 +17,9 @@ import io
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'chave-secreta-padrao')
 
-# Banco de dados SQLite
 data_dir = os.environ.get('DATA_DIR', '.')
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{data_dir}/database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# Upload de imagens
 app.config['UPLOAD_FOLDER'] = os.path.join(data_dir, 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
@@ -55,7 +51,7 @@ class Analise(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # ============================================
-# ANALISADOR SIMPLES (para teste)
+# ANALISADOR SIMPLES
 # ============================================
 class ImageAnalyzer:
     def analisar(self, imagem_bytes):
@@ -102,12 +98,6 @@ def allowed_file(filename):
 # ============================================
 # ROTAS
 # ============================================
-@app.route('/profile')
-@login_required
-def profile():
-    """Página de perfil do usuário"""
-    return render_template('profile.html', user=current_user)
-    
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -135,6 +125,10 @@ def register():
         
         if User.query.filter_by(username=username).first():
             flash('Usuário já existe!', 'danger')
+            return redirect(url_for('register'))
+        
+        if User.query.filter_by(email=email).first():
+            flash('Email já cadastrado!', 'danger')
             return redirect(url_for('register'))
         
         user = User(
@@ -178,7 +172,7 @@ def upload():
             return redirect(request.url)
         
         if not allowed_file(file.filename):
-            flash('Formato não permitido!', 'danger')
+            flash('Formato não permitido! Use PNG, JPG, JPEG, BMP', 'danger')
             return redirect(request.url)
         
         try:
@@ -207,6 +201,8 @@ def upload():
                 
                 flash(f'Resultado: {resultado["resultado"]}', 'success')
                 return redirect(url_for('results'))
+            else:
+                flash(resultado['mensagem'], 'danger')
         except Exception as e:
             flash(f'Erro: {str(e)}', 'danger')
     
@@ -217,6 +213,7 @@ def upload():
 def results():
     resultado = session.get('ultimo_resultado')
     if not resultado:
+        flash('Nenhuma análise recente.', 'warning')
         return redirect(url_for('upload'))
     return render_template('results.html', resultado=resultado)
 
@@ -226,6 +223,20 @@ def history():
     analises = Analise.query.filter_by(user_id=current_user.id).order_by(Analise.created_at.desc()).all()
     return render_template('history.html', analises=analises)
 
+@app.route('/analise/<int:analise_id>')
+@login_required
+def view_analise(analise_id):
+    analise = Analise.query.get_or_404(analise_id)
+    if analise.user_id != current_user.id and current_user.role != 'admin':
+        flash('Acesso negado!', 'danger')
+        return redirect(url_for('dashboard'))
+    return render_template('view_analise.html', analise=analise)
+
+@app.route('/profile')
+@login_required
+def profile():
+    return render_template('profile.html', user=current_user)
+
 @app.route('/admin')
 @login_required
 def admin_dashboard():
@@ -234,7 +245,11 @@ def admin_dashboard():
         return redirect(url_for('dashboard'))
     return render_template('admin_dashboard.html',
                          total_usuarios=User.query.count(),
-                         total_analises=Analise.query.count())
+                         total_analises=Analise.query.count(),
+                         admins=User.query.filter_by(role='admin').count(),
+                         medicos=User.query.filter_by(role='medico').count(),
+                         pacientes=User.query.filter_by(role='paciente').count(),
+                         ultimas_analises=Analise.query.order_by(Analise.created_at.desc()).limit(10).all())
 
 @app.route('/admin/users')
 @login_required
@@ -271,6 +286,7 @@ with app.app_context():
         )
         db.session.add(admin)
         db.session.commit()
+        print("✅ Admin criado!")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
