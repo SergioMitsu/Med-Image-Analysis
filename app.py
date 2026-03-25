@@ -156,7 +156,102 @@ def dashboard():
     total = Analise.query.filter_by(user_id=current_user.id).count()
     anomalias = Analise.query.filter_by(user_id=current_user.id, resultado='ANOMALIA').count()
     ultimas = Analise.query.filter_by(user_id=current_user.id).order_by(Analise.created_at.desc()).limit(5).all()
-    return render_template('dashboard.html', total_analises=total, analises_anomalia=anomalias, ultimas_analises=ultimas)
+    
+    # ============================================
+    # DADOS PARA GRÁFICOS (apenas para admin)
+    # ============================================
+    dados_graficos = None
+    if current_user.role == 'admin':
+        # Total de análises por dia (últimos 7 dias)
+        from datetime import datetime, timedelta
+        import matplotlib.pyplot as plt
+        import io
+        import base64
+        
+        dados_por_dia = []
+        datas = []
+        for i in range(7):
+            data = datetime.now() - timedelta(days=i)
+            dia_inicio = datetime(data.year, data.month, data.day, 0, 0, 0)
+            dia_fim = datetime(data.year, data.month, data.day, 23, 59, 59)
+            total_dia = Analise.query.filter(Analise.created_at >= dia_inicio, Analise.created_at <= dia_fim).count()
+            dados_por_dia.append(total_dia)
+            datas.append(data.strftime('%d/%m'))
+        
+        # Total de análises por usuário (top 5)
+        from sqlalchemy import func
+        top_usuarios = db.session.query(User.username, func.count(Analise.id))\
+            .join(Analise, User.id == Analise.user_id)\
+            .group_by(User.id)\
+            .order_by(func.count(Analise.id).desc())\
+            .limit(5).all()
+        
+        usuarios_nomes = [u[0] for u in top_usuarios]
+        usuarios_counts = [u[1] for u in top_usuarios]
+        
+        # Gráfico 1: Análises por dia
+        fig1, ax1 = plt.subplots(figsize=(10, 4))
+        ax1.bar(datas, dados_por_dia, color='#667eea')
+        ax1.set_title('Análises por Dia (Últimos 7 Dias)', fontsize=14, fontweight='bold')
+        ax1.set_xlabel('Data')
+        ax1.set_ylabel('Número de Análises')
+        ax1.set_facecolor('#f8f9fa')
+        fig1.patch.set_facecolor('#f8f9fa')
+        
+        # Converte para base64
+        buf1 = io.BytesIO()
+        fig1.savefig(buf1, format='png', bbox_inches='tight', facecolor='#f8f9fa')
+        buf1.seek(0)
+        grafico_dias = base64.b64encode(buf1.getvalue()).decode('utf-8')
+        plt.close(fig1)
+        
+        # Gráfico 2: Top usuários
+        fig2, ax2 = plt.subplots(figsize=(8, 4))
+        cores = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#00f2fe']
+        ax2.barh(usuarios_nomes, usuarios_counts, color=cores)
+        ax2.set_title('Top 5 Usuários com Mais Análises', fontsize=14, fontweight='bold')
+        ax2.set_xlabel('Número de Análises')
+        ax2.set_facecolor('#f8f9fa')
+        fig2.patch.set_facecolor('#f8f9fa')
+        
+        buf2 = io.BytesIO()
+        fig2.savefig(buf2, format='png', bbox_inches='tight', facecolor='#f8f9fa')
+        buf2.seek(0)
+        grafico_usuarios = base64.b64encode(buf2.getvalue()).decode('utf-8')
+        plt.close(fig2)
+        
+        # Gráfico 3: Proporção Normal vs Anomalia
+        normais = Analise.query.filter_by(resultado='NORMAL').count()
+        anomalias_total = Analise.query.filter_by(resultado='ANOMALIA').count()
+        
+        fig3, ax3 = plt.subplots(figsize=(6, 6))
+        labels = ['NORMAL', 'ANOMALIA']
+        sizes = [normais, anomalias_total]
+        colors = ['#28a745', '#dc3545']
+        explode = (0, 0.1)
+        ax3.pie(sizes, explode=explode, labels=labels, colors=colors, autopct='%1.1f%%', shadow=True, startangle=90)
+        ax3.set_title('Proporção de Resultados', fontsize=14, fontweight='bold')
+        
+        buf3 = io.BytesIO()
+        fig3.savefig(buf3, format='png', bbox_inches='tight')
+        buf3.seek(0)
+        grafico_pizza = base64.b64encode(buf3.getvalue()).decode('utf-8')
+        plt.close(fig3)
+        
+        dados_graficos = {
+            'dias': grafico_dias,
+            'usuarios': grafico_usuarios,
+            'pizza': grafico_pizza,
+            'normais': normais,
+            'anomalias': anomalias_total
+        }
+    
+    return render_template('dashboard.html', 
+                         total_analises=total, 
+                         analises_anomalia=anomalias, 
+                         ultimas_analises=ultimas,
+                         dados_graficos=dados_graficos,
+                         is_admin=(current_user.role == 'admin'))
 
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
