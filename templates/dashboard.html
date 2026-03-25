@@ -1,58 +1,151 @@
 {% extends "base.html" %}
 
+{% block title %}Dashboard - MedAnalyzer{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        transition: transform 0.3s;
+        cursor: pointer;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    .chart-container {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .chart-title {
+        font-size: 1.2rem;
+        font-weight: bold;
+        margin-bottom: 15px;
+        color: #333;
+        border-left: 4px solid #667eea;
+        padding-left: 10px;
+    }
+    .btn-pdf {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        border: none;
+        color: white;
+    }
+    .btn-pdf:hover {
+        background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+        color: white;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container">
-    <h2>Dashboard</h2>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-tachometer-alt"></i> Dashboard</h2>
+        {% if is_admin %}
+        <a href="{{ url_for('gerar_relatorio_pdf') }}" class="btn btn-pdf">
+            <i class="fas fa-file-pdf"></i> Gerar Relatório PDF
+        </a>
+        {% endif %}
+    </div>
     
-    <div class="row">
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body">
-                    <h3>{{ total_analises }}</h3>
-                    <p>Total de Análises</p>
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card stat-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-chart-line fa-3x text-primary"></i>
+                    <h3 class="mt-2">{{ total_analises }}</h3>
+                    <p class="text-muted">Total de Análises</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body">
-                    <h3>{{ analises_anomalia }}</h3>
-                    <p>Anomalias Detectadas</p>
+        <div class="col-md-6">
+            <div class="card stat-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-exclamation-triangle fa-3x text-warning"></i>
+                    <h3 class="mt-2">{{ analises_anomalia }}</h3>
+                    <p class="text-muted">Anomalias Detectadas</p>
                 </div>
             </div>
         </div>
     </div>
     
-    <h3>Últimas Análises</h3>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Data</th>
-                <th>Resultado</th>
-                <th>Probabilidade</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for a in ultimas_analises %}
-            <tr>
-                <td>{{ a.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
-                <td>
-                    <span class="badge bg-{{ 'danger' if a.resultado == 'ANOMALIA' else 'success' }}">
-                        {{ a.resultado }}
-                    </span>
-                </td>
-                <td>{{ "%.1f"|format(a.probabilidade * 100) }}%</td>
-                <td>
-                    <a href="{{ url_for('view_analise', analise_id=a.id) }}" class="btn btn-sm btn-info">
-                        Ver
-                    </a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <!-- GRÁFICOS (APENAS PARA ADMIN) -->
+    {% if is_admin and dados_graficos %}
+    <div class="row">
+        <div class="col-12">
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-chart-bar"></i> Análises nos Últimos 7 Dias
+                </div>
+                <img src="data:image/png;base64,{{ dados_graficos.dias }}" class="img-fluid" alt="Gráfico de análises por dia">
+            </div>
+        </div>
+    </div>
     
-    <a href="{{ url_for('upload') }}" class="btn btn-primary">Nova Análise</a>
+    <div class="row">
+        <div class="col-md-7">
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-users"></i> Top 5 Usuários com Mais Análises
+                </div>
+                <img src="data:image/png;base64,{{ dados_graficos.usuarios }}" class="img-fluid" alt="Top usuários">
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-chart-pie"></i> Proporção de Resultados
+                </div>
+                <img src="data:image/png;base64,{{ dados_graficos.pizza }}" class="img-fluid" alt="Proporção">
+                <div class="mt-3 text-center">
+                    <span class="badge bg-success">NORMAL: {{ dados_graficos.normais }}</span>
+                    <span class="badge bg-danger ms-2">ANOMALIA: {{ dados_graficos.anomalias }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <h3 class="mt-4"><i class="fas fa-history"></i> Últimas Análises</h3>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Resultado</th>
+                    <th>Probabilidade</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in ultimas_analises %}
+                <tr>
+                    <td>{{ a.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                    <td>
+                        <span class="badge bg-{{ 'danger' if a.resultado == 'ANOMALIA' else 'success' }}">
+                            {{ a.resultado }}
+                        </span>
+                    </td>
+                    <td>{{ "%.1f"|format(a.probabilidade * 100) }}%</td>
+                    <td>
+                        <a href="{{ url_for('view_analise', analise_id=a.id) }}" class="btn btn-sm btn-info">
+                            <i class="fas fa-eye"></i> Ver
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="text-center mt-3">
+        <a href="{{ url_for('upload') }}" class="btn btn-primary">
+            <i class="fas fa-upload"></i> Nova Análise
+        </a>
+        <a href="{{ url_for('history') }}" class="btn btn-secondary">
+            <i class="fas fa-history"></i> Ver Histórico Completo
+        </a>
+    </div>
 </div>
 {% endblock %}
